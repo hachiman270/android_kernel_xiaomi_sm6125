@@ -14,6 +14,9 @@
 #include "wpa_helpers.h"
 
 
+extern char *sigma_cert_path;
+
+
 static enum sigma_cmd_result cmd_dev_send_frame(struct sigma_dut *dut,
 						struct sigma_conn *conn,
 						struct sigma_cmd *cmd)
@@ -67,11 +70,151 @@ static enum sigma_cmd_result cmd_dev_set_parameter(struct sigma_dut *dut,
 }
 
 
+static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   const char *val)
+{
+	char buf[200];
+	struct wpa_ctrl *ctrl = NULL;
+	int e;
+	char resp[200];
+	int num_disconnected = 0;
+
+	strlcpy(resp, "ServerCertTrustResult,Accepted", sizeof(resp));
+
+	if (strcasecmp(val, "Accept") != 0 && strcasecmp(val, "Reject") != 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Unknown ServerCertTrust value '%s'", val);
+		return INVALID_SEND_STATUS;
+	}
+
+	snprintf(buf, sizeof(buf), "%s/uosc-disabled", sigma_cert_path);
+	if (file_exists(buf)) {
+		strlcpy(resp,
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,UOSC disabled on device",
+			sizeof(resp));
+		goto done;
+	}
+
+	if (!dut->server_cert_hash[0]) {
+		strlcpy(resp,
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,No server certificate stored",
+			sizeof(resp));
+		goto done;
+	}
+
+	if (dut->sta_tod_policy) {
+		strlcpy(resp,
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,TOD policy",
+			sizeof(resp));
+		goto done;
+	}
+
+	if (strcasecmp(val, "Accept") != 0) {
+		strlcpy(resp, "ServerCertTrustResult,Rejected", sizeof(resp));
+		goto done;
+	}
+
+	snprintf(buf, sizeof(buf), "hash://server/sha256/%s",
+		 dut->server_cert_hash);
+	if (set_network_quoted(get_station_ifname(), dut->infra_network_id,
+			       "ca_cert", buf) < 0) {
+		strlcpy(resp,
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,Could not configure server certificate hash for the network profile",
+			sizeof(resp));
+		goto done;
+	}
+
+	if (set_network(get_station_ifname(), dut->infra_network_id,
+			"domain_match", "NULL") < 0 ||
+	    set_network(get_station_ifname(), dut->infra_network_id,
+			"domain_suffix_match", "NULL") < 0) {
+		strlcpy(resp,
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,Could not clear domain matching rules",
+			sizeof(resp));
+		goto done;
+	}
+
+	wpa_command(get_station_ifname(), "DISCONNECT");
+	snprintf(buf, sizeof(buf), "SELECT_NETWORK %d", dut->infra_network_id);
+	if (wpa_command(get_station_ifname(), buf) < 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "Failed to select "
+				"network id %d on %s",
+				dut->infra_network_id,
+				get_station_ifname());
+		strlcpy(resp,
+			"ServerCertTrustResult,Accepted,Result,Could not request reconnection",
+			sizeof(resp));
+		goto done;
+	}
+
+	ctrl = open_wpa_mon(get_station_ifname());
+	if (!ctrl)
+		goto done;
+
+	for (e = 0; e < 20; e++) {
+		const char *events[] = {
+			"CTRL-EVENT-EAP-TLS-CERT-ERROR",
+			"CTRL-EVENT-DISCONNECTED",
+			"CTRL-EVENT-CONNECTED",
+			NULL
+		};
+		char buf[1024];
+		int res;
+
+		res = get_wpa_cli_events(dut, ctrl, events, buf, sizeof(buf));
+		if (res < 0) {
+			strlcpy(resp,
+				"ServerCertTrustResult,Accepted,Result,Association did not complete",
+				sizeof(resp));
+			goto done;
+		}
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "Connection event: %s",
+				buf);
+
+		if (strstr(buf, "CTRL-EVENT-EAP-TLS-CERT-ERROR")) {
+			strlcpy(resp,
+				"ServerCertTrustResult,Accepted,Result,TLS server certificate validation failed with updated profile",
+				sizeof(resp));
+			goto done;
+		}
+
+		if (strstr(buf, "CTRL-EVENT-DISCONNECTED")) {
+			num_disconnected++;
+
+			if (num_disconnected > 2) {
+				strlcpy(resp,
+					"ServerCertTrustResult,Accepted,Result,Connection failed",
+					sizeof(resp));
+				goto done;
+			}
+		}
+
+		if (strstr(buf, "CTRL-EVENT-CONNECTED")) {
+				strlcpy(resp,
+					"ServerCertTrustResult,Accepted,Result,Connected",
+					sizeof(resp));
+			break;
+		}
+	}
+
+done:
+	if (ctrl) {
+		wpa_ctrl_detach(ctrl);
+		wpa_ctrl_close(ctrl);
+	}
+
+	send_resp(dut, conn, SIGMA_COMPLETE, resp);
+	return STATUS_SENT;
+}
+
+
 static enum sigma_cmd_result cmd_dev_exec_action(struct sigma_dut *dut,
 						 struct sigma_conn *conn,
 						 struct sigma_cmd *cmd)
 {
 	const char *program = get_param(cmd, "Program");
+	const char *val;
 
 #ifdef MIRACAST
 	if (program && (strcasecmp(program, "WFD") == 0 ||
@@ -84,6 +227,10 @@ static enum sigma_cmd_result cmd_dev_exec_action(struct sigma_dut *dut,
 
 	if (program && strcasecmp(program, "DPP") == 0)
 		return dpp_dev_exec_action(dut, conn, cmd);
+
+	val = get_param(cmd, "ServerCertTrust");
+	if (val)
+		return sta_server_cert_trust(dut, conn, val);
 
 	return ERROR_SEND_STATUS;
 }
@@ -222,10 +369,11 @@ static int is_runtime_id_valid(struct sigma_dut *dut, const char *val)
 static int build_log_dir(struct sigma_dut *dut, char *dir, size_t dir_size)
 {
 	int res;
-	const char *vendor;
+	const char *vendor = dut->vendor_name;
 	int i;
 
-	vendor = dut->vendor_name ? dut->vendor_name : "Unknown";
+	if (!vendor)
+		return -1;
 
 	if (dut->log_file_dir) {
 		res = snprintf(dir, dir_size, "%s/%s", dut->log_file_dir,
@@ -277,6 +425,12 @@ static enum sigma_cmd_result cmd_dev_start_test(struct sigma_dut *dut,
 	val = get_param(cmd, "Runtime_ID");
 	if (!(val && is_runtime_id_valid(dut, val)))
 		return INVALID_SEND_STATUS;
+
+	if (!dut->vendor_name) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Log collection not supported without vendor name specified on the command line (-N)");
+		return SUCCESS_SEND_STATUS;
+	}
 
 	if (build_log_dir(dut, dir, sizeof(dir)) < 0)
 		return ERROR_SEND_STATUS;
@@ -471,6 +625,12 @@ static enum sigma_cmd_result cmd_dev_stop_test(struct sigma_dut *dut,
 	char dir[200];
 	int res;
 
+	if (!dut->vendor_name) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Log collection not supported without vendor name specified on the command line (-N)");
+		return SUCCESS_SEND_STATUS;
+	}
+
 	val = get_param(cmd, "Runtime_ID");
 	if (!val || strcmp(val, dut->dev_start_test_runtime_id) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Invalid runtime id");
@@ -494,7 +654,7 @@ static enum sigma_cmd_result cmd_dev_stop_test(struct sigma_dut *dut,
 #endif /* ANDROID */
 
 	res = snprintf(out_file, sizeof(out_file), "%s_%s_%s.tar.gz",
-		       dut->vendor_name ? dut->vendor_name : "Unknown",
+		       dut->vendor_name,
 		       dut->model_name ? dut->model_name : "Unknown",
 		       dut->dev_start_test_runtime_id);
 	if (res < 0 || res >= sizeof(out_file))
