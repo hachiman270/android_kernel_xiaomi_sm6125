@@ -101,6 +101,11 @@ dpp_get_local_bootstrap(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (success)
 		*success = 0;
+	if (!bs) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Missing DPPBS");
+		return STATUS_SENT_ERROR;
+	}
 	if (strcasecmp(bs, "QR") == 0) {
 		type = "qrcode";
 	} else if (strcasecmp(bs, "NFC") == 0) {
@@ -1118,6 +1123,13 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	int akm_use_selector = 0;
 	int conn_status;
 	int chirp = 0;
+
+	if (!type) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Missing DPPActionType");
+		return STATUS_SENT_ERROR;
+	}
+
 	int manual = strcasecmp(type, "ManualDPP") == 0;
 	time_t start, now;
 	FILE *f;
@@ -2682,6 +2694,12 @@ static enum sigma_cmd_result dpp_manual_dpp(struct sigma_dut *dut,
 		dut->default_timeout = atoi(val);
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP timeout: %u",
 				dut->default_timeout);
+	}
+
+	if (!bs) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Missing DPPBS");
+		return STATUS_SENT_ERROR;
 	}
 
 	if (strcasecmp(bs, "NFC") == 0) {
