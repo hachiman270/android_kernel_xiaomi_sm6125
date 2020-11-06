@@ -1351,7 +1351,7 @@ static int dwc3_probe(struct platform_device *pdev)
 	if (dwc->dr_mode == USB_DR_MODE_OTG ||
 		dwc->dr_mode == USB_DR_MODE_PERIPHERAL) {
 		ret = dwc3_gadget_init(dwc);
-		if (ret != -EPROBE_DEFER) {
+		if (ret) {
 			dev_err(dwc->dev, "gadget init failed %d\n", ret);
 			goto err3;
 		}
@@ -1410,8 +1410,9 @@ static int dwc3_remove(struct platform_device *pdev)
 
 	dwc3_debugfs_exit(dwc);
 	dwc3_gadget_exit(dwc);
-	pm_runtime_allow(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
+	pm_runtime_put_noidle(&pdev->dev);
+	pm_runtime_set_suspended(&pdev->dev);
 
 	dwc3_free_event_buffers(dwc);
 	dwc3_free_scratch_buffers(dwc);
