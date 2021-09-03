@@ -4962,7 +4962,8 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val;
-
+	if(!intf)
+		return -1;
 	val = get_param(cmd, "FT_DS");
 	if (val) {
 		if (strcasecmp(val, "Enable") == 0) {
@@ -6994,7 +6995,8 @@ static enum sigma_cmd_result sta_get_pmk(struct sigma_dut *dut,
 {
 	const char *intf = get_param(cmd, "Interface");
 	char buf[4096], bssid[20], resp[200], *pos, *tmp;
-
+	if(!intf)
+		return -1;
 	snprintf(buf, sizeof(buf), "PMKSA_GET %d", dut->infra_network_id);
 	if (wpa_command_resp(intf, buf, buf, sizeof(buf)) < 0 ||
 	    strncmp(buf, "UNKNOWN COMMAND", 15) == 0) {
@@ -7596,7 +7598,8 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	const char *type;
 	const char *program = get_param(cmd, "program");
 	const char *dev_role = get_param(cmd, "DevRole");
-
+	if(!intf)
+		return -1;
 	if (dut->station_ifname_2g &&
 	    strcmp(dut->station_ifname_2g, intf) == 0)
 		dut->use_5g = 0;
@@ -9140,7 +9143,8 @@ sta_set_wireless_wpa3(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val;
-
+	if(!intf)
+		return -1;
 	val = get_param(cmd, "ocvc");
 	if (val)
 		dut->ocvc = atoi(val);

@@ -341,7 +341,7 @@ void send_resp(struct sigma_dut *dut, struct sigma_conn *conn,
 const char * get_param(struct sigma_cmd *cmd, const char *name)
 {
 	int i;
-	for (i = 0; i < cmd->count; i++) {
+	for (i = 0; (i < cmd->count)&&(i < MAX_PARAMS); i++) {
 		if (strcasecmp(name, cmd->params[i]) == 0)
 			return cmd->values[i];
 	}
