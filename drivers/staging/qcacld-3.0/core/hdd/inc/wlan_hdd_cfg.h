@@ -952,7 +952,7 @@ enum hdd_dot11_mode {
 #define CFG_DROP_BCN_ON_CHANNEL_MISMATCH      "drop_bcn_on_chan_mismatch"
 #define CFG_DROP_BCN_ON_CHANNEL_MISMATCH_MIN       (0)
 #define CFG_DROP_BCN_ON_CHANNEL_MISMATCH_MAX       (1)
-#define CFG_DROP_BCN_ON_CHANNEL_MISMATCH_DEFAULT   (1)
+#define CFG_DROP_BCN_ON_CHANNEL_MISMATCH_DEFAULT   (0)
 
 /*
  * <ini>
@@ -5012,10 +5012,10 @@ enum station_keepalive_method {
  *
  * </ini>
  */
-#define CFG_HW_FILTER_MODE_BITMAP_NAME	"gHwFilterMode"
+#define CFG_HW_FILTER_MODE_BITMAP_NAME	"gHwFilterModeBLOCK"
 #define CFG_HW_FILTER_MODE_BITMAP_MIN		(0)
 #define CFG_HW_FILTER_MODE_BITMAP_MAX		(3)
-#define CFG_HW_FILTER_MODE_BITMAP_DEFAULT	(1)
+#define CFG_HW_FILTER_MODE_BITMAP_DEFAULT	(3)
 
 /*
  * <ini>
@@ -5578,10 +5578,10 @@ enum hdd_link_speed_rpt_type {
 #define CFG_ENABLE_DFS_PHYERR_FILTEROFFLOAD_MAX        (1)
 #define CFG_ENABLE_DFS_PHYERR_FILTEROFFLOAD_DEFAULT    (0)
 
-#define CFG_REPORT_MAX_LINK_SPEED                  "gReportMaxLinkSpeed"
+#define CFG_REPORT_MAX_LINK_SPEED                  "gReportMaxLinkSpeedBLOCK"
 #define CFG_REPORT_MAX_LINK_SPEED_MIN              (eHDD_LINK_SPEED_REPORT_ACTUAL)
 #define CFG_REPORT_MAX_LINK_SPEED_MAX              (eHDD_LINK_SPEED_REPORT_MAX_SCALED)
-#define CFG_REPORT_MAX_LINK_SPEED_DEFAULT          (eHDD_LINK_SPEED_REPORT_ACTUAL)
+#define CFG_REPORT_MAX_LINK_SPEED_DEFAULT          (eHDD_LINK_SPEED_REPORT_MAX_SCALED)
 
 /*
  * <ini>
@@ -9056,10 +9056,10 @@ enum hdd_link_speed_rpt_type {
  *
  * </ini>
  */
-#define CFG_TSO_ENABLED_NAME           "TSOEnable"
+#define CFG_TSO_ENABLED_NAME           "TSOEnableBLOCK"
 #define CFG_TSO_ENABLED_MIN            (0)
 #define CFG_TSO_ENABLED_MAX            (1)
-#define CFG_TSO_ENABLED_DEFAULT        (0)
+#define CFG_TSO_ENABLED_DEFAULT        (1)
 
 /*
  * <ini>
@@ -9077,7 +9077,7 @@ enum hdd_link_speed_rpt_type {
  *
  * </ini>
  */
-#define CFG_LRO_ENABLED_NAME           "LROEnable"
+#define CFG_LRO_ENABLED_NAME           "LROEnableBLOCK"
 #define CFG_LRO_ENABLED_MIN            (0)
 #define CFG_LRO_ENABLED_MAX            (1)
 #define CFG_LRO_ENABLED_DEFAULT        (0)
@@ -9098,7 +9098,7 @@ enum hdd_link_speed_rpt_type {
  *
  * </ini>
  */
-#define CFG_GRO_ENABLED_NAME           "GROEnable"
+#define CFG_GRO_ENABLED_NAME           "GROEnableBLOCK"
 #define CFG_GRO_ENABLED_MIN            (0)
 #define CFG_GRO_ENABLED_MAX            (1)
 #define CFG_GRO_ENABLED_DEFAULT        (0)
@@ -13890,8 +13890,8 @@ enum hdd_external_acs_policy {
  * </ini>
  */
 
-#define CFG_IS_SAE_ENABLED_NAME    "sae_enabled"
-#define CFG_IS_SAE_ENABLED_DEFAULT (0)
+#define CFG_IS_SAE_ENABLED_NAME    "sae_enabledBLOCK"
+#define CFG_IS_SAE_ENABLED_DEFAULT (1)
 #define CFG_IS_SAE_ENABLED_MIN     (0)
 #define CFG_IS_SAE_ENABLED_MAX     (1)
 
@@ -15404,7 +15404,7 @@ enum hdd_external_acs_policy {
 #define CFG_ENABLE_GCMP_NAME    "gcmp_enabled"
 #define CFG_ENABLE_GCMP_MIN     (0)
 #define CFG_ENABLE_GCMP_MAX     (1)
-#define CFG_ENABLE_GCMP_DEFAULT (0)
+#define CFG_ENABLE_GCMP_DEFAULT (1)
 
 /*
  * <ini>

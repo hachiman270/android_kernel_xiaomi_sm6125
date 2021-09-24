@@ -36,7 +36,10 @@
 
 #define ROUND_UP_TO_4(val) (((val) + 3) & ~0x3)
 
+
+#ifdef WLAN_DEBUG
 static char *bw_str_arr[] = {"20MHz", "40MHz", "80MHz", "160MHz"};
+#endif
 
 /*
  * Defined the macro tx_rate_stats_print_cmn()
@@ -48,6 +51,7 @@ static char *bw_str_arr[] = {"20MHz", "40MHz", "80MHz", "160MHz"};
  * to bypass the strong type-checking of a function seems a simple
  * trick to use to avoid the code duplication.
  */
+#ifdef WLAN_DEBUG
 #define tx_rate_stats_print_cmn(_tx_rate_info, _concise) \
 	do {							 \
 		qdf_nofl_info("TX Rate Info:");			 \
@@ -126,6 +130,9 @@ static char *bw_str_arr[] = {"20MHz", "40MHz", "80MHz", "160MHz"};
 		/* RSSI Values for last ack frames */		\
 		qdf_nofl_info("Ack RSSI: %d", _tx_rate_info->ack_rssi);\
 	} while (0)
+#else
+#define tx_rate_stats_print_cmn(_tx_rate_info, _concise)
+#endif
 
 static void htt_t2h_stats_tx_rate_stats_print(wlan_dbg_tx_rate_info_t *
 					      tx_rate_info, int concise)
@@ -149,6 +156,7 @@ static void htt_t2h_stats_tx_rate_stats_print_v2(wlan_dbg_tx_rate_info_v2_t *
  * to bypass the strong type-checking of a function seems a simple
  * trick to use to avoid the code duplication.
  */
+#ifdef WLAN_DEBUG
 #define rx_rate_stats_print_cmn(_rx_phy_info, _concise) \
 	do {							\
 		qdf_nofl_info("RX Rate Info:");			\
@@ -263,6 +271,9 @@ static void htt_t2h_stats_tx_rate_stats_print_v2(wlan_dbg_tx_rate_info_v2_t *
 				((_rx_phy_info->rssi_chain2 >> 8) & 0xff),\
 				((_rx_phy_info->rssi_chain2 >> 0) & 0xff));\
 	} while (0)
+#else
+#define rx_rate_stats_print_cmn(_rx_phy_info, _concise)
+#endif
 
 static void htt_t2h_stats_rx_rate_stats_print(wlan_dbg_rx_rate_info_t *
 					      rx_phy_info, int concise)
@@ -280,6 +291,7 @@ static void
 htt_t2h_stats_pdev_stats_print(struct wlan_dbg_stats *wlan_pdev_stats,
 			       int concise)
 {
+#ifdef WLAN_DEBUG
 	struct wlan_dbg_tx_stats *tx = &wlan_pdev_stats->tx;
 	struct wlan_dbg_rx_stats *rx = &wlan_pdev_stats->rx;
 
@@ -355,6 +367,7 @@ htt_t2h_stats_pdev_stats_print(struct wlan_dbg_stats *wlan_pdev_stats,
 	qdf_nofl_info("phy_errs dropped  :\t%d", rx->phy_err_drop);
 	/* Number of mpdu errors - FCS, MIC, ENC etc. */
 	qdf_nofl_info("mpdu_errs         :\t%d", rx->mpdu_errs);
+#endif
 
 }
 
